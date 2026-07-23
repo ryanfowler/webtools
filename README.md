@@ -21,13 +21,13 @@ Each result contains `title`, `url`, and, when available, `snippet`.
 
 ## Fetch
 
-Fetches an HTTP or HTTPS HTML page and writes YAML response metadata followed by extracted Markdown:
+Fetches an HTTP or HTTPS HTML page or PDF and writes YAML response metadata followed by extracted Markdown:
 
 ```sh
 webtools fetch https://example.com/
 ```
 
-HTML is decoded using its declared character set and extracted with [pagemark](https://github.com/ryanfowler/pagemark). The title, author, date, canonical URL, and other available page metadata are included in the YAML frontmatter. Non-HTML responses and pages from which pagemark cannot extract useful content return an error.
+HTML is decoded using its declared character set and extracted with [pagemark](https://github.com/ryanfowler/pagemark). Text-based PDFs are extracted page by page, with available document metadata and the page count included in the YAML frontmatter. PDF responses, decoded text-related streams, and extracted text are each limited to 10 MiB; PDFs are also limited to 1,000 pages. To bound text expansion before allocation, individual `ToUnicode` mappings are limited to four bytes. Scanned PDFs without a text layer are not OCRed. Unsupported responses and documents without extractable content return an error.
 
 ## Development
 

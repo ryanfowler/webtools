@@ -118,7 +118,7 @@ func writeFrontmatter(w io.Writer, fields []metadataField) error {
 			return fmt.Errorf("write frontmatter: %w", err)
 		}
 	}
-	if _, err := io.WriteString(w, "---\n"); err != nil {
+	if _, err := io.WriteString(w, "---\n\n"); err != nil {
 		return fmt.Errorf("write frontmatter: %w", err)
 	}
 	return nil

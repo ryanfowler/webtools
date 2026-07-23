@@ -25,7 +25,7 @@ func TestFetchHTMLExtractsMarkdownAndMetadata(t *testing.T) {
 		t.Fatal(err)
 	}
 	output := stdout.String()
-	for _, want := range []string{"---\n", `content_type: "text/html; charset=utf-8"`, `title: "Example Guide"`, `author: "Ada Example"`, "# Example Guide"} {
+	for _, want := range []string{"---\n", `content_type: "text/html; charset=utf-8"`, `title: "Example Guide"`, `author: "Ada Example"`, "---\n\n# Example Guide"} {
 		if !strings.Contains(output, want) {
 			t.Errorf("output does not contain %q:\n%s", want, output)
 		}

@@ -33,7 +33,7 @@ func runInstall(args []string, stdout, stderr io.Writer) error {
 	flags.SetOutput(stderr)
 	flags.Usage = func() { fmt.Fprintln(flags.Output(), "Usage: webtools install [--force] [agents|pi]") }
 	force := flags.Bool("force", false, "replace modified installed skills")
-	if err := flags.Parse(args); err != nil {
+	if err := parseInterspersed(flags, args); err != nil {
 		return err
 	}
 	if flags.NArg() > 1 {

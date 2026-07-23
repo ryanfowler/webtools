@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -32,7 +33,7 @@ func runSearch(ctx context.Context, args []string, stdout, stderr io.Writer, cli
 	flags.Usage = func() { fmt.Fprintln(flags.Output(), "Usage: webtools search [--limit N] QUERY") }
 	limit := flags.Int("limit", 10, "maximum number of results")
 	flags.IntVar(limit, "n", 10, "maximum number of results (shorthand)")
-	if err := flags.Parse(args); err != nil {
+	if err := parseInterspersed(flags, args); err != nil {
 		return err
 	}
 	if *limit < 1 || *limit > maxSearchLimit {
@@ -81,7 +82,11 @@ func search(ctx context.Context, client *http.Client, endpoint, query string, li
 		return nil, fmt.Errorf("DuckDuckGo returned %s", resp.Status)
 	}
 
-	doc, err := html.Parse(io.LimitReader(resp.Body, 5<<20))
+	body, err := readLimited(resp.Body, 5<<20)
+	if err != nil {
+		return nil, fmt.Errorf("read DuckDuckGo response: %w", err)
+	}
+	doc, err := html.Parse(bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("parse DuckDuckGo response: %w", err)
 	}

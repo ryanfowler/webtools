@@ -74,6 +74,32 @@ func TestRunSearchOutputsJSON(t *testing.T) {
 	}
 }
 
+func TestRunSearchAcceptsFlagAfterQuery(t *testing.T) {
+	client := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if got := req.URL.Query().Get("q"); got != "go language" {
+			t.Errorf("query = %q", got)
+		}
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Header:     make(http.Header),
+			Body:       io.NopCloser(strings.NewReader(searchFixture)),
+			Request:    req,
+		}, nil
+	})}
+	var stdout, stderr bytes.Buffer
+	if err := runSearch(context.Background(), []string{"go language", "--limit", "1"}, &stdout, &stderr, client); err != nil {
+		t.Fatal(err)
+	}
+	var results []SearchResult
+	if err := json.Unmarshal(stdout.Bytes(), &results); err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("got %d results, want 1", len(results))
+	}
+}
+
 func TestRunSearchRejectsExcessiveLimit(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	err := runSearch(context.Background(), []string{"--limit", strconv.Itoa(maxSearchLimit + 1), "query"}, &stdout, &stderr, http.DefaultClient)

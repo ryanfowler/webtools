@@ -16,9 +16,12 @@ Use `webtools fetch` to retrieve and inspect the main content of a known web pag
 
 ```sh
 webtools fetch "https://example.com/page"
+webtools fetch --max-chars 20000 "https://example.com/page"
 ```
 
-The URL must be an absolute `http://` or `https://` URL and must not contain credentials.
+Downloads are limited to 5 MiB and extracted Markdown to 50,000 characters by default. Use `--max-response-bytes` and `--max-chars` to request smaller or larger positive limits. Inspect the `truncated`, `extracted_chars`, and `output_chars` metadata before assuming the output is complete.
+
+The URL must be an absolute `http://` or `https://` URL and must not contain credentials. Private, loopback, and link-local destinations are rejected, including redirects. Use `--allow-private` only when the user explicitly asks to access a trusted local or private service.
 
 The command follows HTTP redirects and writes YAML frontmatter followed by extracted Markdown:
 
@@ -53,7 +56,7 @@ Metadata fields are omitted when unavailable. The `url` field reflects the final
 6. When freshness matters, inspect the `date`, canonical URL, and surrounding content rather than assuming the page is current.
 7. For important claims, compare the page with another authoritative source.
 
-For a long page, redirect output to a temporary file and inspect only the relevant sections with the available file tools:
+For a long page, first choose a reasonable `--max-chars` limit. If needed, redirect output to a temporary file and inspect only the relevant sections with the available file tools:
 
 ```sh
 tmp="$(mktemp)"
@@ -68,6 +71,7 @@ Remove temporary files when they are no longer needed.
 
 - PDFs, images, JSON, plain text, and other non-HTML responses.
 - Invalid or credential-bearing URLs.
+- Private-network destinations unless `--allow-private` is explicitly supplied.
 - Non-success HTTP responses.
 - HTML pages from which useful main content cannot be extracted.
 - Pages requiring authentication, browser interaction, or client-side JavaScript to render their content.

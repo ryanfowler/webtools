@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"flag"
@@ -22,7 +21,7 @@ type metadataField struct {
 	value string
 }
 
-func runFetch(ctx context.Context, args []string, stdout, stderr io.Writer, client *http.Client, stdoutIsTerminal bool) error {
+func runFetch(ctx context.Context, args []string, stdout, stderr io.Writer, client *http.Client, _ bool) error {
 	flags := flag.NewFlagSet("webtools fetch", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	flags.Usage = func() { fmt.Fprintln(flags.Output(), "Usage: webtools fetch URL") }
@@ -43,7 +42,7 @@ func runFetch(ctx context.Context, args []string, stdout, stderr io.Writer, clie
 		return fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Set("User-Agent", userAgent)
-	req.Header.Set("Accept", "*/*")
+	req.Header.Set("Accept", "text/html, application/xhtml+xml")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -67,10 +66,10 @@ func runFetch(ctx context.Context, args []string, stdout, stderr io.Writer, clie
 		{"status", strconv.Itoa(resp.StatusCode)},
 	}
 
-	if mediaType == "text/html" || mediaType == "application/xhtml+xml" {
-		return outputHTML(resp.Body, contentType, finalURL, baseFields, stdout)
+	if mediaType != "text/html" && mediaType != "application/xhtml+xml" {
+		return fmt.Errorf("response is not HTML (Content-Type: %s)", displayContentType(mediaType))
 	}
-	return outputRaw(resp.Body, mediaType, baseFields, stdout, stderr, stdoutIsTerminal)
+	return outputHTML(resp.Body, contentType, finalURL, baseFields, stdout)
 }
 
 func outputHTML(body io.Reader, contentType, pageURL string, fields []metadataField, stdout io.Writer) error {
@@ -106,23 +105,6 @@ func outputHTML(body io.Reader, contentType, pageURL string, fields []metadataFi
 	return nil
 }
 
-func outputRaw(body io.Reader, mediaType string, fields []metadataField, stdout, stderr io.Writer, terminal bool) error {
-	buffered := bufio.NewReader(body)
-	sample, _ := buffered.Peek(512)
-	binary := isBinaryContent(mediaType, sample)
-	if err := writeFrontmatter(stdout, fields); err != nil {
-		return err
-	}
-	if binary && terminal {
-		fmt.Fprintf(stderr, "webtools: warning: refusing to write binary content (%s) to a terminal\n", displayContentType(mediaType))
-		return nil
-	}
-	if _, err := io.Copy(stdout, buffered); err != nil {
-		return fmt.Errorf("write response body: %w", err)
-	}
-	return nil
-}
-
 func writeFrontmatter(w io.Writer, fields []metadataField) error {
 	if _, err := io.WriteString(w, "---\n"); err != nil {
 		return fmt.Errorf("write frontmatter: %w", err)
@@ -140,41 +122,6 @@ func writeFrontmatter(w io.Writer, fields []metadataField) error {
 		return fmt.Errorf("write frontmatter: %w", err)
 	}
 	return nil
-}
-
-func isBinaryContent(mediaType string, sample []byte) bool {
-	// Do not trust Content-Type alone: mislabeled binary data and terminal escape
-	// sequences must not be written to an interactive terminal.
-	if sampleLooksBinary(sample) {
-		return true
-	}
-	if mediaType == "" {
-		mediaType, _, _ = mime.ParseMediaType(http.DetectContentType(sample))
-	}
-	if strings.HasPrefix(mediaType, "text/") || strings.HasSuffix(mediaType, "+json") || strings.HasSuffix(mediaType, "+xml") {
-		return false
-	}
-	switch mediaType {
-	case "application/json", "application/xml", "application/javascript", "application/x-javascript", "application/yaml", "application/x-yaml", "image/svg+xml":
-		return false
-	default:
-		return true
-	}
-}
-
-func sampleLooksBinary(sample []byte) bool {
-	controlBytes := 0
-	for _, b := range sample {
-		switch {
-		case b == 0 || b == 0x1b: // NUL or the start of an ANSI escape sequence.
-			return true
-		case b < 0x20 && b != '\t' && b != '\n' && b != '\r':
-			controlBytes++
-		case b == 0x7f:
-			controlBytes++
-		}
-	}
-	return len(sample) > 0 && controlBytes*10 >= len(sample)
 }
 
 func displayContentType(mediaType string) string {

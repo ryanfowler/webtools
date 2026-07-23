@@ -29,6 +29,22 @@ webtools fetch https://example.com/
 
 HTML is decoded using its declared character set and extracted with [pagemark](https://github.com/ryanfowler/pagemark). The title, author, date, canonical URL, and other available page metadata are included in the YAML frontmatter. Non-HTML responses and pages from which pagemark cannot extract useful content return an error.
 
+## Agent skills
+
+Install the bundled `web-search` and `web-fetch` [Agent Skills](https://agentskills.io) into the generic global skills directory:
+
+```sh
+webtools install
+```
+
+This installs the skills under `~/.agents/skills/`, which is supported by pi and other compatible agents. To install them into pi's agent-specific directory instead, run:
+
+```sh
+webtools install pi
+```
+
+The pi target uses `$PI_CODING_AGENT_DIR/skills` when that environment variable is set and `~/.pi/agent/skills/` otherwise. Installation is idempotent and preserves modified skill files; use `webtools install --force [agents|pi]` to replace modified or older copies.
+
 ## Development
 
 ```sh

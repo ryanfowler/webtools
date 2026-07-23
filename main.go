@@ -34,6 +34,8 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, client *h
 		return runSearch(ctx, args[1:], stdout, stderr, client)
 	case "fetch":
 		return runFetch(ctx, args[1:], stdout, stderr, client, stdoutIsTerminal)
+	case "install":
+		return runInstall(args[1:], stdout, stderr)
 	case "help", "-h", "--help":
 		printUsage(stdout)
 		return nil
@@ -47,10 +49,12 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, `Usage:
   webtools search [--limit N] QUERY
   webtools fetch URL
+  webtools install [--force] [agents|pi]
 
 Commands:
-  search  Search DuckDuckGo and output results as JSON
-  fetch   Fetch a URL and output its content with YAML frontmatter`)
+  search   Search DuckDuckGo and output results as JSON
+  fetch    Fetch a URL and output its content with YAML frontmatter
+  install  Install web-search and web-fetch agent skills`)
 }
 
 func isTerminal(f *os.File) (bool, error) {

@@ -59,7 +59,7 @@ func printUsage(w io.Writer) {
 Commands:
   search   Search DuckDuckGo and output results as JSON
   fetch    Fetch a URL and output its content with YAML frontmatter
-  install  Install web-search and web-fetch agent skills`)
+  install  Install portable Agent Skills, or native pi tools with the pi target`)
 }
 
 func isTerminal(f *os.File) (bool, error) {

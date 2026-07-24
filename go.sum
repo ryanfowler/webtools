@@ -1,5 +1,5 @@
-github.com/ryanfowler/pagemark v0.1.0 h1:Z7b3CU20QYnoUDP9+u0AJdSHrhBZN8x/TSB9IfS+gak=
-github.com/ryanfowler/pagemark v0.1.0/go.mod h1:nfqOJ6hx9DosskZM58Cb/F2FSdSY4rUWVNgkejxke9Y=
+github.com/ryanfowler/pagemark v0.1.1 h1:0JqLtwODxJugYlZhrTZi6e+zjkoiNFfXM7vOOxGP9qI=
+github.com/ryanfowler/pagemark v0.1.1/go.mod h1:nfqOJ6hx9DosskZM58Cb/F2FSdSY4rUWVNgkejxke9Y=
 github.com/ryanfowler/readability v0.1.0 h1:9+bwDJzaiBFlSeoOx2daalno1xe3Xt9y6VI2Hgfm7oM=
 github.com/ryanfowler/readability v0.1.0/go.mod h1:AGSyr10wBtXDJjXttWB0e5+gOvo0owxv02FJV0PyWqI=
 golang.org/x/net v0.57.0 h1:K5+3DljvIuDG9/Jv9rvyMywYNFCQ9RSUY6OOTTkT+tE=

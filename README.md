@@ -35,21 +35,35 @@ HTML is decoded using its declared character set and extracted with [pagemark](h
 
 For safety, fetch rejects loopback, private, link-local, unspecified, and multicast destinations, including redirect targets. Use `--allow-private` when intentionally fetching a development server or other trusted private endpoint.
 
-## Agent skills
+## Agent integration
 
-Install the bundled `web-search` and `web-fetch` [Agent Skills](https://agentskills.io) into the generic global skills directory:
+### Portable Agent Skills
+
+Install the bundled CLI-backed `web-search` and `web-fetch` [Agent Skills](https://agentskills.io) for any compatible agent:
 
 ```sh
 webtools install
 ```
 
-This installs the skills under `~/.agents/skills/`, which is supported by pi and other compatible agents. To install them into pi's agent-specific directory instead, run:
+This installs them under `~/.agents/skills/`. The skills instruct an agent to invoke the CLI through its shell tool.
+
+### Native pi tools
+
+For [pi](https://pi.dev), install the native `web_search` and `web_fetch` extension tools:
 
 ```sh
 webtools install pi
 ```
 
-The pi target uses `$PI_CODING_AGENT_DIR/skills` when that environment variable is set and `~/.pi/agent/skills/` otherwise. Installation is idempotent and preserves modified skill files; use `webtools install --force [agents|pi]` to replace modified or older copies.
+The extension provides typed arguments, research guidance, cancellation, output truncation, structured tool results, and compact TUI rendering without routing calls through the model's shell tool. It is installed as `extensions/webtools/index.ts`. The pi target uses `$PI_CODING_AGENT_DIR` when set and `~/.pi/agent` otherwise.
+
+The repository can also be loaded directly as a pi package after the `webtools` executable has been installed:
+
+```sh
+pi install git:github.com/ryanfowler/webtools
+```
+
+Installation is idempotent and preserves modified resources; use `webtools install --force [agents|pi]` to replace modified or older copies. Restart pi or run `/reload` after installation.
 
 ## Development
 
@@ -57,4 +71,5 @@ The pi target uses `$PI_CODING_AGENT_DIR/skills` when that environment variable 
 gofmt -w .
 go test ./...
 go vet ./...
+pi -e ./extensions/webtools/index.test.ts --list-models
 ```

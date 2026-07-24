@@ -13,17 +13,23 @@ import (
 
 const defaultSkillTarget = "agents"
 
+// skillNames are the portable, CLI-backed skills installed for Agent Skills clients.
 var skillNames = []string{"web-search", "web-fetch"}
 
-// embeddedSkills contains the Agent Skills shipped with webtools.
+// embeddedResources contains the Agent Skills and pi extension shipped with webtools.
 //
-//go:embed skills/*/SKILL.md
-var embeddedSkills embed.FS
+//go:embed skills/*/SKILL.md extensions/webtools/index.ts
+var embeddedResources embed.FS
 
-type skillInstall struct {
-	name    string
+type resourceSpec struct {
+	name       string
+	sourcePath string
+	targetPath string
+}
+
+type resourceInstall struct {
+	spec    resourceSpec
 	source  []byte
-	path    string
 	status  string
 	pending bool
 }
@@ -32,7 +38,7 @@ func runInstall(args []string, stdout, stderr io.Writer) error {
 	flags := flag.NewFlagSet("webtools install", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	flags.Usage = func() { fmt.Fprintln(flags.Output(), "Usage: webtools install [--force] [agents|pi]") }
-	force := flags.Bool("force", false, "replace modified installed skills")
+	force := flags.Bool("force", false, "replace modified installed resources")
 	if err := parseInterspersed(flags, args); err != nil {
 		return err
 	}
@@ -48,6 +54,9 @@ func runInstall(args []string, stdout, stderr io.Writer) error {
 	target, err := skillTarget(agent)
 	if err != nil {
 		return err
+	}
+	if agent == "pi" {
+		return installPiResources(filepath.Dir(target), *force, stdout)
 	}
 	return installSkills(target, *force, stdout)
 }
@@ -73,35 +82,56 @@ func skillTarget(agent string) (string, error) {
 }
 
 func installSkills(target string, force bool, stdout io.Writer) error {
-	installs := make([]skillInstall, 0, len(skillNames))
+	specs := make([]resourceSpec, 0, len(skillNames))
 	for _, name := range skillNames {
-		source, err := fs.ReadFile(embeddedSkills, filepath.ToSlash(filepath.Join("skills", name, "SKILL.md")))
+		specs = append(specs, resourceSpec{
+			name:       name + " skill",
+			sourcePath: filepath.ToSlash(filepath.Join("skills", name, "SKILL.md")),
+			targetPath: filepath.Join(target, name, "SKILL.md"),
+		})
+	}
+	return installResources(specs, force, stdout)
+}
+
+func installPiResources(configDir string, force bool, stdout io.Writer) error {
+	return installResources([]resourceSpec{
+		{
+			name:       "webtools pi extension",
+			sourcePath: "extensions/webtools/index.ts",
+			targetPath: filepath.Join(configDir, "extensions", "webtools", "index.ts"),
+		},
+	}, force, stdout)
+}
+
+func installResources(specs []resourceSpec, force bool, stdout io.Writer) error {
+	installs := make([]resourceInstall, 0, len(specs))
+	for _, spec := range specs {
+		source, err := fs.ReadFile(embeddedResources, spec.sourcePath)
 		if err != nil {
-			return fmt.Errorf("read embedded %s skill: %w", name, err)
+			return fmt.Errorf("read embedded %s: %w", spec.name, err)
 		}
-		path := filepath.Join(target, name, "SKILL.md")
-		installed, err := os.ReadFile(path)
+		installed, err := os.ReadFile(spec.targetPath)
 		switch {
 		case err == nil && string(installed) == string(source):
-			installs = append(installs, skillInstall{name: name, source: source, path: path, status: "unchanged"})
+			installs = append(installs, resourceInstall{spec: spec, source: source, status: "unchanged"})
 		case err == nil && !force:
-			return fmt.Errorf("%s already exists with different content; use --force to replace it", path)
+			return fmt.Errorf("%s already exists with different content; use --force to replace it", spec.targetPath)
 		case err == nil:
-			installs = append(installs, skillInstall{name: name, source: source, path: path, status: "replaced", pending: true})
+			installs = append(installs, resourceInstall{spec: spec, source: source, status: "replaced", pending: true})
 		case errors.Is(err, os.ErrNotExist):
-			installs = append(installs, skillInstall{name: name, source: source, path: path, status: "installed", pending: true})
+			installs = append(installs, resourceInstall{spec: spec, source: source, status: "installed", pending: true})
 		default:
-			return fmt.Errorf("inspect %s: %w", path, err)
+			return fmt.Errorf("inspect %s: %w", spec.targetPath, err)
 		}
 	}
 
 	for _, install := range installs {
 		if install.pending {
-			if err := writeFileAtomic(install.path, install.source, 0o644); err != nil {
-				return fmt.Errorf("install %s skill: %w", install.name, err)
+			if err := writeFileAtomic(install.spec.targetPath, install.source, 0o644); err != nil {
+				return fmt.Errorf("install %s: %w", install.spec.name, err)
 			}
 		}
-		fmt.Fprintf(stdout, "%s %s\n", install.status, install.path)
+		fmt.Fprintf(stdout, "%s %s\n", install.status, install.spec.targetPath)
 	}
 	return nil
 }
@@ -111,7 +141,7 @@ func writeFileAtomic(path string, content []byte, mode fs.FileMode) (err error) 
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	temp, err := os.CreateTemp(dir, ".SKILL.md-*")
+	temp, err := os.CreateTemp(dir, ".webtools-*")
 	if err != nil {
 		return err
 	}

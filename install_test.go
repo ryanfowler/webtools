@@ -75,6 +75,30 @@ func TestInstallSkillsInstallsBothSkillsAndIsIdempotent(t *testing.T) {
 	}
 }
 
+func TestInstallPiResourcesInstallsExtensionOnly(t *testing.T) {
+	configDir := t.TempDir()
+	var output bytes.Buffer
+	if err := installPiResources(configDir, false, &output); err != nil {
+		t.Fatal(err)
+	}
+
+	path := filepath.Join(configDir, "extensions", "webtools", "index.ts")
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	if len(content) == 0 {
+		t.Errorf("%s is empty", path)
+	}
+	if !strings.Contains(output.String(), "installed "+path) {
+		t.Errorf("missing installation output for %s: %s", path, output.String())
+	}
+
+	if _, err := os.Stat(filepath.Join(configDir, "skills")); !os.IsNotExist(err) {
+		t.Errorf("pi install unexpectedly created a skills directory")
+	}
+}
+
 func TestInstallSkillsRequiresForceToReplaceChanges(t *testing.T) {
 	target := t.TempDir()
 	if err := installSkills(target, false, &bytes.Buffer{}); err != nil {
